@@ -1,4 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:medicare_app/constants.dart';
 import 'package:medicare_app/firebase_options.dart';
@@ -15,13 +16,16 @@ Future<void> handleBackgroundMessage(RemoteMessage message) async {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  FirebaseMessaging.onBackgroundMessage(
-    NotificationService.firebaseMessagingBackgroundHandler,
-  );
-  NotificationService.initializeNotification();
-  await LocalNotificationService.initialize();
-  for (String topic in topics) {
-    FirebaseMessaging.instance.subscribeToTopic(topic);
+
+  if (!kIsWeb) {
+    FirebaseMessaging.onBackgroundMessage(
+      NotificationService.firebaseMessagingBackgroundHandler,
+    );
+    NotificationService.initializeNotification();
+    await LocalNotificationService.initialize();
+    for (String topic in topics) {
+      FirebaseMessaging.instance.subscribeToTopic(topic);
+    }
   }
   tz.initializeTimeZones();
   runApp(MyApp());

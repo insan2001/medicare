@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:medicare_app/constants.dart';
+import 'package:uuid/uuid.dart';
 
 class AddReminderScreen extends StatefulWidget {
   @override
@@ -58,11 +60,13 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
       );
 
       await FirebaseFirestore.instance.collection('reminders').add({
-        name: _patientNameController.text,
+        patientName: _patientNameController.text,
         notes: _notesController.text,
         date: formatedDate.toIso8601String(),
         status: false,
         nurse: '',
+        nurseId: FirebaseAuth.instance.currentUser?.uid,
+        id: Uuid().v4().hashCode.abs(),
       });
 
       Navigator.pop(context);

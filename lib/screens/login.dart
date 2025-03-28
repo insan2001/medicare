@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_login/flutter_login.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:medicare_app/constants.dart';
 import 'package:medicare_app/screens/home.dart';
 
 class LoginScreen extends StatelessWidget {
@@ -16,6 +17,11 @@ class LoginScreen extends StatelessWidget {
         email: data.name,
         password: data.password,
       );
+      currentUserName =
+          (await FirebaseFirestore.instance
+              .collection('users')
+              .doc(_auth.currentUser!.uid)
+              .get())[userName];
       return null; // Success
     } catch (e) {
       return "Invalid email or password"; // Failure message
@@ -30,13 +36,18 @@ class LoginScreen extends StatelessWidget {
             password: data.password!,
           );
 
-      // Store user details in Firestore
-      await _firestore.collection('nurses').doc(userCredential.user!.uid).set({
-        'email': data.name,
-        'role': 'nurse',
-      });
+      String uid = userCredential.user!.uid;
 
-      return null; // Success
+      Map<String, dynamic> defaultUserData = {
+        email: data.name,
+        userName: 'Unknown',
+        phone: 'Not set',
+        profilePic: null,
+      };
+
+      await _firestore.collection('users').doc(uid).set(defaultUserData);
+
+      return null;
     } catch (e) {
       return "Signup failed. Try again!";
     }
