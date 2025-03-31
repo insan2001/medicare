@@ -2,12 +2,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:medicare_app/constants.dart';
-import 'package:medicare_app/functions/localNotifications.dart';
-import 'package:medicare_app/functions/send.dart';
+import 'package:medicare_app/functions/request.dart';
+import 'package:medicare_app/screens/details.dart';
+import 'package:medicare_app/screens/login.dart';
 import 'package:medicare_app/screens/profile.dart';
 import 'package:medicare_app/screens/reminder.dart';
 
 class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
   @override
   _HomeScreenState createState() => _HomeScreenState();
 }
@@ -16,9 +19,10 @@ class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final CollectionReference patients = FirebaseFirestore.instance.collection(
-    'reminders',
+    reminders,
   );
   final String currentUserId = FirebaseAuth.instance.currentUser!.uid;
+  TextEditingController remarksController = TextEditingController();
 
   @override
   void initState() {
@@ -26,29 +30,22 @@ class _HomeScreenState extends State<HomeScreen>
     _tabController = TabController(length: 2, vsync: this);
   }
 
-  void acceptRequest(String patientName, String date, int id) {
-    FCMService().sendTopicMessage(
-      topics[0],
-      'Request accepted',
-      '${currentUserName} has accepted ${patientName}',
-    );
-    DateTime _date = DateTime.parse(date);
-
-    LocalNotificationService.scheduleNotification(
-      id,
-      "Patient waiting",
-      'You have to visit the ${patientName}',
-      _date,
-    );
-
-    patients.doc(patientName).update({status: true, nurse: currentUserId});
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text("Patient Requests"),
+        actions: [
+          IconButton(
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
+              Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (context) => LoginScreen()));
+            },
+            icon: Icon(Icons.logout),
+          ),
+        ],
         leading: IconButton(
           onPressed: () {
             Navigator.of(context).push(
@@ -69,8 +66,9 @@ class _HomeScreenState extends State<HomeScreen>
           StreamBuilder(
             stream: patients.snapshots(),
             builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
-              if (!snapshot.hasData)
+              if (!snapshot.hasData) {
                 return Center(child: CircularProgressIndicator());
+              }
 
               final pendingPatients =
                   snapshot.data!.docs.where((doc) {
@@ -86,17 +84,31 @@ class _HomeScreenState extends State<HomeScreen>
                 itemCount: pendingPatients.length,
                 itemBuilder: (context, index) {
                   var doc = pendingPatients[index];
-                  return ListTile(
-                    title: Text(doc[patientName]),
-                    subtitle: Text("Medication: ${doc[notes]}"),
-                    trailing: ElevatedButton(
-                      onPressed:
-                          () => acceptRequest(
-                            doc[patientName],
-                            doc[date],
-                            doc[id],
+
+                  return Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: ListTile(
+                      title: Text(doc[patientName]),
+                      subtitle: Text(
+                        "Time: ${DateTime.parse(doc[date]).toString()}",
+                      ),
+                      onTap:
+                          () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => DetailsScreen(docId: doc.id),
+                            ),
                           ),
-                      child: Text("Accept"),
+                      trailing: ElevatedButton(
+                        onPressed:
+                            () => acceptRequest(
+                              doc[patientName],
+                              doc[date],
+                              doc[id],
+                              doc.id,
+                            ),
+                        child: Text("Accept"),
+                      ),
                     ),
                   );
                 },
@@ -108,8 +120,9 @@ class _HomeScreenState extends State<HomeScreen>
           StreamBuilder(
             stream: patients.snapshots(),
             builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
-              if (!snapshot.hasData)
+              if (!snapshot.hasData) {
                 return Center(child: CircularProgressIndicator());
+              }
 
               final historyPatients =
                   snapshot.data!.docs.where((doc) {
@@ -125,17 +138,28 @@ class _HomeScreenState extends State<HomeScreen>
                 itemCount: historyPatients.length,
                 itemBuilder: (context, index) {
                   var doc = historyPatients[index];
-                  return ListTile(
-                    title: Text(doc[patientName]),
-                    subtitle: Text(
-                      "Taken by: ${doc[nurseId] == currentUserId ? doc[nurse] : "You"}",
-                    ),
-                    shape: Border.all(
-                      width: 2,
-                      color:
-                          doc[nurseId] == currentUserId
-                              ? Colors.blue
-                              : Colors.red,
+                  return Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: ListTile(
+                      title: Text(doc[patientName]),
+                      subtitle: Text("Taken by: ${doc[nurse]}"),
+                      onTap:
+                          () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => DetailsScreen(docId: doc.id),
+                            ),
+                          ),
+                      shape: RoundedRectangleBorder(
+                        side: BorderSide(
+                          width: 1,
+                          color:
+                              doc[nurseId] == currentUserId
+                                  ? Colors.blue
+                                  : Colors.red,
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
                   );
                 },

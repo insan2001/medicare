@@ -2,9 +2,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:medicare_app/constants.dart';
+import 'package:medicare_app/functions/request.dart';
 import 'package:uuid/uuid.dart';
 
 class AddReminderScreen extends StatefulWidget {
+  const AddReminderScreen({super.key});
+
   @override
   _AddReminderScreenState createState() => _AddReminderScreenState();
 }
@@ -12,8 +15,8 @@ class AddReminderScreen extends StatefulWidget {
 class _AddReminderScreenState extends State<AddReminderScreen> {
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
-  TextEditingController _patientNameController = TextEditingController();
-  TextEditingController _notesController = TextEditingController();
+  final TextEditingController _patientNameController = TextEditingController();
+  final TextEditingController _notesController = TextEditingController();
 
   // Function to pick a date
   Future<void> _pickDate(BuildContext context) async {
@@ -59,18 +62,20 @@ class _AddReminderScreenState extends State<AddReminderScreen> {
         _selectedTime!.minute,
       );
 
-      await FirebaseFirestore.instance.collection('reminders').add({
+      final doc = await FirebaseFirestore.instance.collection(reminders).add({
         patientName: _patientNameController.text,
         notes: _notesController.text,
         date: formatedDate.toIso8601String(),
         status: false,
         nurse: '',
+        remarks: '',
         nurseId: FirebaseAuth.instance.currentUser?.uid,
+        statusOptions: 3,
         id: Uuid().v4().hashCode.abs(),
       });
 
       Navigator.pop(context);
-
+      createRequest(_patientNameController.text, date, doc.id);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(

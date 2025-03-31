@@ -9,6 +9,8 @@ class LoginScreen extends StatelessWidget {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  LoginScreen({super.key});
+
   Duration get loginTime => Duration(milliseconds: 2250);
 
   Future<String?> _authUser(LoginData data) async {
@@ -17,11 +19,6 @@ class LoginScreen extends StatelessWidget {
         email: data.name,
         password: data.password,
       );
-      currentUserName =
-          (await FirebaseFirestore.instance
-              .collection('users')
-              .doc(_auth.currentUser!.uid)
-              .get())[userName];
       return null; // Success
     } catch (e) {
       return "Invalid email or password"; // Failure message
@@ -37,15 +34,17 @@ class LoginScreen extends StatelessWidget {
           );
 
       String uid = userCredential.user!.uid;
+      String name = data.name!.split('@')[0];
 
       Map<String, dynamic> defaultUserData = {
         email: data.name,
-        userName: 'Unknown',
+        userName: name,
         phone: 'Not set',
         profilePic: null,
       };
 
-      await _firestore.collection('users').doc(uid).set(defaultUserData);
+      await FirebaseAuth.instance.currentUser!.updateDisplayName(name);
+      await _firestore.collection(users).doc(uid).set(defaultUserData);
 
       return null;
     } catch (e) {
@@ -65,7 +64,7 @@ class LoginScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FlutterLogin(
-      title: 'Nurse Reminder',
+      title: 'MediCare',
       onLogin: _authUser,
       onSignup: _signupUser,
       onRecoverPassword: _recoverPassword,
